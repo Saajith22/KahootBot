@@ -3,9 +3,13 @@ import client from "../index";
 
 client.on("interactionCreate", async (interaction) => {
   if (interaction.isCommand()) {
+    const name = interaction.options.getSubcommand()
+      ? interaction.options.getSubcommand()
+      : interaction.commandName;
+
     const command: CommandOptions = client.commands.get(
-      interaction.commandName
-    ) as CommandOptions;
+      name
+    );
 
     if (!command)
       return await interaction.reply({

@@ -7,3 +7,10 @@ declare interface CommandOptions {
   type?: string;
   run: Function;
 }
+
+declare type Quiz = {
+  name: string;
+  questions: {
+    question: string;
+  }[];
+};
