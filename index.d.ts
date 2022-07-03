@@ -1,8 +1,9 @@
-import { CommandInteractionOptionResolver } from "discord.js";
+import { ApplicationCommandOptionData } from "discord.js";
 
 declare interface CommandOptions {
   name: string;
   description: string;
-  options: CommandInteractionOptionResolver[];
+  options: ApplicationCommandOptionData[];
+  type?: string;
   run: Function;
 }

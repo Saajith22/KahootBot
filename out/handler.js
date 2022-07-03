@@ -37,12 +37,45 @@ class ExtendedClient extends discord_js_1.Client {
                     options,
                 });
             });
+        });
+        globPromise("out/commands/*/*/*.js").then((files) => {
+            const subCommand = {
+                name: null,
+                description: null,
+                type: "SUB_COMMAND",
+            };
+            const options = files.map((cmd) => {
+                const cmdName = cmd.split("/")[3];
+                const file = require(`./${cmd.replace("out/", "")}`);
+                const { name, description, options, type } = file.default;
+                if (!subCommand.name)
+                    subCommand.name = cmdName;
+                if (!subCommand.description)
+                    subCommand.description = `${cmdName} system!`;
+                this.commands.set(name, file.default);
+                return {
+                    name,
+                    description,
+                    options,
+                    type,
+                };
+            });
+            slashCommands.push({
+                ...subCommand,
+                options,
+            });
             this.on("ready", async () => {
                 await this.guilds.cache
                     .get(process.env.guildID)
                     .commands.set(slashCommands);
-                console.log("Slash commands loaded!!".green);
+                console.log("Sub-Commands loaded!!".yellow);
             });
+        });
+        this.on("ready", async () => {
+            await this.guilds.cache
+                .get(process.env.guildID)
+                .commands.set(slashCommands);
+            console.log("Slash commands loaded!!".green);
         });
     }
 }
