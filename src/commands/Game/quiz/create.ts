@@ -42,18 +42,19 @@ const Command: CommandOptions = {
       questions: [],
     };
 
-    const quizDetails = [
-      `**Name:** \`${quiz.name}\``,
-      `**Amount of Questions:** \`${quiz.questions.length}\``,
-    ];
+    const quizDetails = [`**Name:** \`${quiz.name}\``];
 
     const embed = new MessageEmbed()
       .setTitle("Create a quiz")
-      .setDescription("Use below menu to create a quiz!")
+      .setDescription("Use the menu below to create a quiz!")
       .addFields([
         {
-          name: "Current Quiz Details:",
+          name: "Basic Quiz Details:",
           value: quizDetails.join("\n"),
+        },
+        {
+          name: "Amount Of Questions:",
+          value: `**\`${quiz.questions.length}\`**`,
         },
       ])
       .setColor("PURPLE");
@@ -93,16 +94,29 @@ const Command: CommandOptions = {
 
       switch (value) {
         case "question":
+          collector.options.max++;
+
           const modal = await makeModal(
             `Question: ${quiz.questions.length + 1}`,
             "question-modal",
-            new MessageActionRow<TextInputComponent>().setComponents([
-              new TextInputComponent()
-                .setLabel("Question")
-                .setPlaceholder("Enter your question..")
-                .setStyle("SHORT")
-                .setCustomId(`text-modal`),
-            ])
+            [
+              new MessageActionRow<TextInputComponent>().setComponents([
+                new TextInputComponent()
+                  .setLabel("Question")
+                  .setPlaceholder("Enter your question..")
+                  .setStyle("SHORT")
+                  .setCustomId(`text-question`),
+              ]),
+              new MessageActionRow<TextInputComponent>().setComponents([
+                new TextInputComponent()
+                  .setLabel("Options (Max: 4 | Min: 2)")
+                  .setPlaceholder(
+                    "Type in the options...\nExample:\na - apple\nb - banana"
+                  )
+                  .setStyle("PARAGRAPH")
+                  .setCustomId(`text-options`),
+              ]),
+            ]
           );
 
           await i.showModal(modal);

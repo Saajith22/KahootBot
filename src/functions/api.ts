@@ -7,8 +7,10 @@ import {
 export async function makeModal(
   title: string,
   id: string,
-  data: MessageActionRow<TextInputComponent>
+  data: MessageActionRow<TextInputComponent>[]
 ) {
-  const modal = new Modal().setTitle(title).setCustomId(id).setComponents(data);
+  const modal = new Modal().setTitle(title).setCustomId(id);
+  data.forEach(d => modal.addComponents(d));
+  
   return modal;
 }
