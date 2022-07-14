@@ -5,6 +5,7 @@ import {
   Message,
   MessageActionRow,
   MessageAttachment,
+  MessageButton,
   MessageEmbed,
   MessageSelectMenu,
   TextInputComponent,
@@ -28,21 +29,17 @@ const Command: CommandOptions = {
   ],
   run: async (
     client: Client,
-    interation: CommandInteraction,
+    interaction: CommandInteraction,
     options: CommandInteractionOptionResolver
   ) => {
-    const data = await db.findOne({
-      guild: interation.guild.id,
-    });
-
     const quizName = options.getString("name");
 
     const quiz: Quiz = {
-      name: quizName || "Kahoot-Quiz",
+      name: quizName || `Kahoot-Quiz-${Math.floor(Math.random() * 100000)}`,
       questions: [],
     };
 
-    const quizDetails = [`**Name:** \`${quiz.name}\``];
+    const quizDetails = [`**Quiz Name:** \`${quiz.name}\``];
 
     const embed = new MessageEmbed()
       .setTitle("Create a quiz")
@@ -54,7 +51,7 @@ const Command: CommandOptions = {
         },
         {
           name: "Amount Of Questions:",
-          value: `**\`${quiz.questions.length}\`**`,
+          value: `There are totally \`${quiz.questions.length}\` questions!`,
         },
       ])
       .setColor("PURPLE");
@@ -64,14 +61,22 @@ const Command: CommandOptions = {
         .setCustomId("create-menu")
         .setOptions([
           {
-            label: "Add question",
+            label: "Add a question",
             value: "question",
+          },
+          {
+            label: "Delete a question",
+            value: "delete",
+          },
+          {
+            label: "Finish Process",
+            value: "finish",
           },
         ])
         .setPlaceholder("Choose an operation")
     );
 
-    const msg: Message = (await interation.reply({
+    const msg = (await interaction.reply({
       embeds: [embed],
       components: [row],
       fetchReply: true,
@@ -79,8 +84,8 @@ const Command: CommandOptions = {
 
     const collector = msg.createMessageComponentCollector({
       filter: async (i) => {
-        if (interation.user.id === i.user.id) return true;
-        return void (await interation.followUp({
+        if (interaction.user.id === i.user.id) return true;
+        return void (await interaction.followUp({
           content: "You can not use this interaction!!",
           ephemeral: true,
         }));
@@ -96,7 +101,7 @@ const Command: CommandOptions = {
         case "question":
           collector.options.max++;
 
-          const modal = await makeModal(
+          const questionModal = await makeModal(
             `Question: ${quiz.questions.length + 1}`,
             "question-modal",
             [
@@ -116,10 +121,104 @@ const Command: CommandOptions = {
                   .setStyle("PARAGRAPH")
                   .setCustomId(`text-options`),
               ]),
+              new MessageActionRow<TextInputComponent>().setComponents([
+                new TextInputComponent()
+                  .setLabel("Correct Answer")
+                  .setPlaceholder("Type in the correct option (Eg: a)")
+                  .setStyle("SHORT")
+                  .setCustomId(`text-answer`),
+              ]),
             ]
           );
 
-          await i.showModal(modal);
+          await i.showModal(questionModal);
+
+          const modal = await i.awaitModalSubmit({
+            time: 60000 * 5,
+            filter: async (m) => m.customId === "question-modal",
+          });
+
+          const textIds = ["text-question", "text-options", "text-answer"];
+          const [question, options, answer] = textIds.map((id) =>
+            modal.fields.getTextInputValue(id)
+          );
+
+          const filteredOptions = options.split("\n").map((f) => {
+            let split = f.split("-").map((s) => s.replace(" ", ""));
+            return {
+              name: split[0],
+              value: split[1],
+            };
+          });
+
+          if (filteredOptions.find((f) => !f.value || !f.name))
+            return modal.reply({
+              content:
+                "Invalid options! Please make sure they are of the format:\n```a - option1\nb - option2```\n\n**Seperate each option with a seperate line!**",
+              ephemeral: true,
+            });
+
+          if (filteredOptions.length < 2 || filteredOptions.length > 4)
+            return modal.reply({
+              content:
+                "There has to be atleast 2 options, and it can not exceed 4 options!",
+              ephemeral: true,
+            });
+
+          await modal.reply({
+            content: `The question has been added successfully!!`,
+            ephemeral: true,
+          });
+
+          quiz.questions.push({
+            question,
+            answer,
+            options: filteredOptions,
+          });
+
+          console.log(quiz);
+
+          let newEmbed = msg.embeds[0];
+          newEmbed.fields[1].value = `There are totally \`${quiz.questions.length}\` questions!`;
+          await msg.edit({
+            embeds: [newEmbed],
+          });
+
+          break;
+
+        case "delete":
+          collector.options.max++;
+          break;
+
+        case "finish":
+          const data = await db.findOne({
+            guild: interaction.guild.id,
+          });
+
+          if (!data) {
+            await db.create({
+              guild: interaction.guild.id,
+              quizzes: [
+                {
+                  name: quiz.name,
+                  questions: quiz.questions,
+                },
+              ],
+            });
+          } else {
+            data.quizzes.push({
+              name: quiz.name,
+              questions: quiz.questions,
+            });
+
+            data.save();
+          }
+
+          await i.reply({
+            content: `The quiz has been successfully created!!`,
+            ephemeral: true,
+          });
+
           break;
       }
     });

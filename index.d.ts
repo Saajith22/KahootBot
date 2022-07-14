@@ -12,5 +12,10 @@ declare type Quiz = {
   name: string;
   questions: {
     question: string;
+    answer: string;
+    options: {
+      name: string;
+      value: string;
+    }[];
   }[];
 };
