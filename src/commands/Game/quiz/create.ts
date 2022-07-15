@@ -94,6 +94,14 @@ const Command: CommandOptions = {
       componentType: "SELECT_MENU",
     });
 
+    const updateQuestions = async () => {
+      let newEmbed = msg.embeds[0];
+      newEmbed.fields[1].value = `There are totally \`${quiz.questions.length}\` questions!`;
+      await msg.edit({
+        embeds: [newEmbed],
+      });
+    };
+
     collector.on("collect", async (i) => {
       const value = i.values[0];
 
@@ -176,18 +184,60 @@ const Command: CommandOptions = {
             options: filteredOptions,
           });
 
-          console.log(quiz);
-
-          let newEmbed = msg.embeds[0];
-          newEmbed.fields[1].value = `There are totally \`${quiz.questions.length}\` questions!`;
-          await msg.edit({
-            embeds: [newEmbed],
-          });
+          await updateQuestions();
 
           break;
 
         case "delete":
           collector.options.max++;
+
+          const deleteModal = await makeModal(
+            "Delete a question",
+            "delete-modal",
+            [
+              new MessageActionRow<TextInputComponent>().addComponents(
+                new TextInputComponent()
+                  .setCustomId("number")
+                  .setStyle("SHORT")
+                  .setLabel("Question number")
+                  .setPlaceholder("Type the question number to delete...")
+              ),
+            ]
+          );
+
+          await i.showModal(deleteModal);
+
+          const deleteSumbit = await i.awaitModalSubmit({
+            time: 60000 * 5,
+            filter: async (m) => m.customId === "delete-modal",
+          });
+
+          const questionNumber =
+            deleteSumbit.fields.getTextInputValue("number");
+          const parsedNumber = parseInt(questionNumber);
+
+          if (isNaN(parsedNumber))
+            return deleteSumbit.reply({
+              content: "The question number has to be a number!!",
+              ephemeral: true,
+            });
+
+          const providedQuestion = quiz.questions[parsedNumber - 1];
+          if (!providedQuestion)
+            return deleteSumbit.reply({
+              content: "Thats an invalid question number!!",
+              ephemeral: true,
+            });
+
+          quiz.questions.splice(parsedNumber - 1, 1);
+
+          await deleteSumbit.reply({
+            content: `The question has been deleted successfully!!`,
+            ephemeral: true,
+          });
+
+          await updateQuestions();
+
           break;
 
         case "finish":
