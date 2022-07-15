@@ -1,11 +1,8 @@
 import {
-  Client,
   CommandInteraction,
   CommandInteractionOptionResolver,
   Message,
   MessageActionRow,
-  MessageAttachment,
-  MessageButton,
   MessageEmbed,
   MessageSelectMenu,
   TextInputComponent,
@@ -14,6 +11,7 @@ import {
 import { CommandOptions, Quiz } from "../../../..";
 import { makeModal } from "../../../functions/api";
 import { createBoard } from "../../../functions/canvas";
+import ExtendedClient from "../../../handler";
 import db from "../../../models/quiz";
 
 const Command: CommandOptions = {
@@ -28,7 +26,7 @@ const Command: CommandOptions = {
     },
   ],
   run: async (
-    client: Client,
+    client: ExtendedClient,
     interaction: CommandInteraction,
     options: CommandInteractionOptionResolver
   ) => {
@@ -37,6 +35,8 @@ const Command: CommandOptions = {
     const quiz: Quiz = {
       name: quizName || `Kahoot-Quiz-${Math.floor(Math.random() * 100000)}`,
       questions: [],
+      code: null,
+      creator: interaction.user.id,
     };
 
     const quizDetails = [`**Quiz Name:** \`${quiz.name}\``];
@@ -91,6 +91,7 @@ const Command: CommandOptions = {
         }));
       },
       max: 1,
+      idle: 1000 * 60 * 10,
       componentType: "SELECT_MENU",
     });
 
@@ -245,24 +246,35 @@ const Command: CommandOptions = {
             guild: interaction.guild.id,
           });
 
+          const code = createCode(6);
+          quiz.code = code;
+
           if (!data) {
             await db.create({
               guild: interaction.guild.id,
-              quizzes: [
-                {
-                  name: quiz.name,
-                  questions: quiz.questions,
-                },
-              ],
+              quizzes: [quiz],
             });
           } else {
-            data.quizzes.push({
-              name: quiz.name,
-              questions: quiz.questions,
-            });
-
+            data.quizzes.push(quiz);
             data.save();
           }
+
+          row.components.forEach((c) => c.setDisabled(true));
+          await msg.edit({
+            embeds: [
+              new MessageEmbed()
+                .setAuthor({
+                  name: `${quiz.name} | By: ${interaction.user.username}`,
+                })
+                .setThumbnail(`attachment://${client.img.name}`)
+                .setColor("PURPLE")
+                .setDescription(
+                  `**Quiz Details:**\n**\`Code:\`** \`${quiz.code}\`\n**\`Number Of Questions:\`** \`${quiz.questions.length}\``
+                ),
+            ],
+            components: [row],
+            files: [client.img],
+          });
 
           await i.reply({
             content: `The quiz has been successfully created!!`,
@@ -272,7 +284,27 @@ const Command: CommandOptions = {
           break;
       }
     });
+
+    collector.on("end", async (i, r) => {
+      if (r === "time" || r === "idle") {
+        return await interaction.reply({
+          content:
+            "Seems like you ran out of time! Don't worry, your work is saved as a draft, continue by using `/drafts`!",
+          ephemeral: true,
+        });
+      }
+    });
   },
 };
+
+function createCode(n: number) {
+  let str = "";
+  for (let i = 0; i < n; i++) {
+    const randomNumber = Math.floor(Math.random() * 10);
+    str += randomNumber;
+  }
+
+  return str;
+}
 
 export default Command;

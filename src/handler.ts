@@ -4,6 +4,7 @@ import {
   IntentsString,
   Collection,
   ApplicationCommandDataResolvable,
+  MessageAttachment,
 } from "discord.js";
 import { glob } from "glob";
 import { promisify } from "util";
@@ -16,6 +17,7 @@ interface Data {
 
 export default class ExtendedClient extends Client {
   public commands: Collection<string, CommandOptions>;
+  img: MessageAttachment;
   constructor({ intents }: Data) {
     super({
       intents,

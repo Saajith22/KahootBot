@@ -18,4 +18,6 @@ declare type Quiz = {
       value: string;
     }[];
   }[];
+  code: string;
+  creator: string;
 };

@@ -1,28 +1,23 @@
 import {
-  Client,
   CommandInteraction,
   CommandInteractionOptionResolver,
-  MessageAttachment,
   MessageEmbed,
 } from "discord.js";
 
 import { CommandOptions } from "../../..";
 import tutorials from "../../data/tutorials";
-import path from "path";
+import ExtendedClient from "../../handler";
 
 const Command: CommandOptions = {
   name: "tutorial",
   description: "A simple tutorial to understand the basics!",
   options: [],
   run: async (
-    client: Client,
+    client: ExtendedClient,
     interation: CommandInteraction,
     options: CommandInteractionOptionResolver
   ) => {
-    const attach = new MessageAttachment(
-      path.join(__dirname, "..", "..", "..", "images", "Kahoot-Book.png"),
-      "book.png"
-    );
+    const attach = client.img;
 
     const embeds = tutorials.map((tutorial) => {
       const embed = new MessageEmbed()
