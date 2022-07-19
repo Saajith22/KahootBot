@@ -23,6 +23,13 @@ const Command: CommandOptions = {
       name: "name",
       type: "STRING",
       description: "Name of the quiz.",
+      required: true,
+    },
+    {
+      name: "public",
+      type: "BOOLEAN",
+      description: "Whether the quiz should be public or not.",
+      required: true,
     },
   ],
   run: async (
@@ -31,11 +38,13 @@ const Command: CommandOptions = {
     options: CommandInteractionOptionResolver
   ) => {
     const quizName = options.getString("name");
+    const isPublic = options.getBoolean("public");
 
     const quiz: Quiz = {
       name: quizName || `Kahoot-Quiz-${Math.floor(Math.random() * 100000)}`,
       questions: [],
-      code: null,
+      id: createId(),
+      public: isPublic,
       creator: interaction.user.id,
     };
 
@@ -246,20 +255,17 @@ const Command: CommandOptions = {
             guild: interaction.guild.id,
           });
 
-          const code = createCode(6);
-          quiz.code = code;
-
           if (!data) {
             await db.create({
               guild: interaction.guild.id,
               quizzes: [quiz],
+              live: [],
             });
           } else {
             data.quizzes.push(quiz);
             data.save();
           }
 
-          row.components.forEach((c) => c.setDisabled(true));
           await msg.edit({
             embeds: [
               new MessageEmbed()
@@ -269,10 +275,10 @@ const Command: CommandOptions = {
                 .setThumbnail(`attachment://${client.img.name}`)
                 .setColor("PURPLE")
                 .setDescription(
-                  `**Quiz Details:**\n**\`Code:\`** \`${quiz.code}\`\n**\`Number Of Questions:\`** \`${quiz.questions.length}\``
+                  `**Quiz Details:**\n**\`ID:\`** \`${quiz.id}\`\n**\`Number Of Questions:\`** \`${quiz.questions.length}\``
                 ),
             ],
-            components: [row],
+            components: [],
             files: [client.img],
           });
 
@@ -297,11 +303,13 @@ const Command: CommandOptions = {
   },
 };
 
-function createCode(n: number) {
+function createId() {
+  const n = 12;
   let str = "";
+  let chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuwxyz1234567890-_";
   for (let i = 0; i < n; i++) {
-    const randomNumber = Math.floor(Math.random() * 10);
-    str += randomNumber;
+    const randomNumber = Math.floor(Math.random() * chars.length);
+    str += chars[randomNumber];
   }
 
   return str;

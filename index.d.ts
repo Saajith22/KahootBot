@@ -18,6 +18,7 @@ declare type Quiz = {
       value: string;
     }[];
   }[];
-  code: string;
+  id: string;
   creator: string;
+  public: boolean;
 };

@@ -1,6 +1,7 @@
 import {
   CommandInteraction,
   CommandInteractionOptionResolver,
+  GuildMember,
   MessageEmbed,
 } from "discord.js";
 
@@ -9,15 +10,24 @@ import ExtendedClient from "../../../handler";
 import db from "../../../models/quiz";
 
 const Command: CommandOptions = {
-  name: "list",
-  description: "Shows all the available quizzes in the server!!",
+  name: "join",
+  description: "Join a quiz using the code!",
   type: "SUB_COMMAND",
-  options: [],
+  options: [
+    {
+      name: "code",
+      description: "The code for the quiz.",
+      required: true,
+      type: "STRING",
+    },
+  ],
   run: async (
     client: ExtendedClient,
     interaction: CommandInteraction,
     options: CommandInteractionOptionResolver
   ) => {
+    const code = options.getString("code");
+
     const data = await db.findOne({
       guild: interaction.guild.id,
     });
@@ -29,25 +39,13 @@ const Command: CommandOptions = {
         ephemeral: true,
       });
 
-    const quizzes = data.quizzes.slice(0, 10);
-    const quizEmbed = new MessageEmbed()
-      .setTitle("Quizzes")
-      .setColor("PURPLE")
-      .setThumbnail(`attachment://${client.img.name}`)
-      .setDescription(
-        quizzes
-          .map((q) => {
-            return `» **${q.name}**\n — By: ${client.users.cache.get(
-              q.creator
-            )}\n — Public: \`${q.public}\`\n\`ID: ${q.id}\``;
-          })
-          .join("\n")
-      );
+    const quizzes = data.live;
+    const quiz = quizzes.find((q) => q.code === code);
 
-    return interaction.reply({
-      embeds: [quizEmbed],
-      files: [client.img],
-    });
+    quiz.members.push(interaction.member as GuildMember);
+    data.save();
+
+    await interaction.reply("You have successfully joined the quiz!!");
   },
 };
 
